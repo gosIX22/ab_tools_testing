@@ -1,4 +1,5 @@
-import scipy.stats
+from scipy import stats
+import hashlib
 from typing import Optional, List
 
 
@@ -11,11 +12,17 @@ class ABTesting:
     def calc_mde(self):
         pass
 
-    def ttest(self):
-        pass
+    def t_test(self, a, b):
+        _, pvalue = stats.ttest_ind(a, b)
+        return pvalue
 
-    def mannwhitneyu(self):
-        pass
+    def mannwhitneyu(self, a, b):
+        _, pvalue = stats.mannwhitneyu(a, b, alternative='two-sided')
+        return pvalue
 
     def bootstrap(self):
         pass
+
+
+def ab_group_split(salt=''):
+    pass
