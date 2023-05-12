@@ -15,6 +15,7 @@ dependencies = [
     "ipywidgets>=8.0.6",
     "ipykernel>=6.23.0",
     "black>=23.3.0",
+    "setuptools>=67.7.2",
 ]
 requires-python = ">=3.9"
 license = {text = "MIT"}
