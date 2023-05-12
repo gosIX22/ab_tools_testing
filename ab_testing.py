@@ -39,8 +39,7 @@ class ABTesting:
         _, pvalue = stats.mannwhitneyu(a, b, alternative='two-sided')
         return pvalue
 
-    @staticmethod
-    def bootstrap(a: np.array, b: np.array, func=np.mean, n: int = 1000, alpha: float = 0.05) -> float:
+    def bootstrap(self, a: np.array, b: np.array, func=np.mean, n: int = 1000) -> float:
         """
         :param a:
         :param b:
@@ -52,10 +51,9 @@ class ABTesting:
         a_bootstrap = np.random.choice(a, size=(len(a), n))
         b_bootstrap = np.random.choice(b, size=(len(b), n))
         list_diff = func(a_bootstrap, axis=0) - func(b_bootstrap, axis=0)
-        left_bound = np.quantile(list_diff, alpha / 2)
-        right_bound = np.quantile(list_diff, 1 - alpha / 2)
-        res = 1 if (left_bound > 0) or (right_bound < 0) else 0
-        return res
+        left_bound = np.quantile(list_diff, self.ALPHA / 2)
+        right_bound = np.quantile(list_diff, 1 - self.ALPHA / 2)
+        return 1 if (left_bound > 0) or (right_bound < 0) else 0
 
 
 def ab_group_split(salt: str = ''):
