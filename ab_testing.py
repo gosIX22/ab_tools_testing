@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import hashlib
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 
 class ABTesting:
@@ -66,12 +66,12 @@ def ab_group_split(salt: str = ""):
     pass
 
 
-def aa_test(a: np.array, b: np.array, stat_test=ABTesting.t_test, n: int = 1000):
+def aa_test(a_prev: np.array, b_prev: np.array, size: int = 100, stat_test=ABTesting.t_test, n: int = 1000):
     # Needs rework
     p_vals = []
     for _ in range(n):
-        a = stats.norm(0, 1).rvs(1000)
-        b = stats.norm(0.2, 1).rvs(1000)
+        a = np.random.choice(a_prev, replace=False, size=size)
+        b = np.random.choice(b_prev, replace=False, size=size)
         p_val = stat_test(a, b)
         p_vals.append(p_val)
     plt.hist(p_vals, cumulative=True, density=True, bins=50)
@@ -151,3 +151,38 @@ def get_table_sample_size(mu: float, std_1: float, std_2: float, effects: np.arr
     )
     df_results.columns = pd.MultiIndex.from_tuples([(err,) for err in errors], names=["errors"])
     return df_results
+
+
+def _get_sample_mean(data, size):
+    return np.random.choice(data, size, False).mean()
+
+
+def calc_stats(
+    strata: list,
+    sample_size: int = 100,
+    n_iter: int = 1000,
+    is_stratified_var: bool = False,
+    is_stratified_sampling: bool = True,
+) -> Tuple[float, float]:
+    if is_stratified_var:
+        data = np.concatenate(strata)
+        means = [_get_sample_mean(data, sample_size) for _ in range(n_iter)]
+
+        return np.mean(means), np.var(means)
+    else:
+        strata_sizes = [len(stratum) for stratum in strata]
+        full_size = np.sum(strata_sizes)
+        weights = np.array(strata_sizes) / full_size
+
+        sample_sizes = np.zeros(shape=len(strata))
+        if is_stratified_sampling:
+            sample_sizes = (weights * sample_size + 0.5).astype(int)
+        else:
+            while (np.array(sample_sizes)).min() == 0:
+                sample_sizes = np.random.default_rng().multinomial(sample_size, weights)
+
+        means = []
+        for _ in range(n_iter):
+            strata_means = [_get_sample_mean(stratum, size) for stratum, size in zip(strata, sample_sizes)]
+            means.append((weights * np.array(strata_means)).sum())
+        return np.mean(means), np.var(means)
