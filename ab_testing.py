@@ -2,6 +2,7 @@ from scipy import stats
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
 # import hashlib
 from typing import Tuple
 
@@ -21,6 +22,7 @@ class ABTesting:
         bootstrap(a, b, func, n): Performs bootstrap hypothesis testing by resampling the data and comparing the distribution of statistics.
 
     """
+
     def __init__(self, alpha: float = 0.05, beta: float = 0.2):
         """
         Initializes the HypothesisTesting class with specified significance level and type II error rate.
@@ -61,6 +63,33 @@ class ABTesting:
             float: The calculated p-value from the Mann-Whitney U test.
         """
         _, pvalue = stats.mannwhitneyu(a, b, alternative=hypothesis)
+        return pvalue
+
+    @staticmethod
+    def shapiro_test(a: np.array) -> float:
+        """
+        Perform the Shapiro-Wilk test for normality on a given array.
+
+        The Shapiro-Wilk test is used to determine whether a given sample follows a normal distribution.
+        It calculates a test statistic and p-value based on the observed data.
+
+        Parameters:
+            a (np.array): Array of sample data.
+
+        Returns:
+            float: p-value from the Shapiro-Wilk test.
+
+        Example:
+            data = np.array([1.2, 1.5, 1.8, 2.1, 2.4])
+            p_value = shapiro(data)
+            print("p-value:", p_value)
+            # Output: p-value: 0.8936132788658142
+
+        Note:
+            The Shapiro-Wilk test assumes that the sample size should be between 3 and 5000.
+            If the sample size is outside this range, the result may not be accurate.
+        """
+        _, pvalue = stats.shapiro(a)
         return pvalue
 
     def bootstrap(self, a: np.array, b: np.array, func=np.mean, n: int = 1000) -> float:
@@ -320,3 +349,35 @@ def calculate_theta(y_control: np.array, y_pilot: np.array, y_control_cov: np.ar
     variance = y_cov.var()
     theta = covariance / variance
     return theta
+
+
+def set_plot_params():
+    """
+    Set the parameters for matplotlib plot styling.
+
+    This function sets various parameters for matplotlib plot styling to customize the appearance
+    of plots generated using matplotlib.
+
+    Note:
+        This function modifies the default plot parameters for the current session.
+        Any plots created after calling this function will reflect the updated styling.
+    """
+    titlesize = 24
+    labelsize = 22
+    legendsize = 22
+    xticksize = 18
+    yticksize = xticksize
+
+    plt.rcParams["legend.markerscale"] = 1.5
+    plt.rcParams["legend.handletextpad"] = 0.5
+    plt.rcParams["legend.labelspacing"] = 0.4
+    plt.rcParams["legend.borderpad"] = 0.5
+    plt.rcParams["font.size"] = 12
+    plt.rcParams["font.serif"] = "Times New Roman"
+    plt.rcParams["axes.labelsize"] = labelsize
+    plt.rcParams["axes.titlesize"] = titlesize
+    plt.rcParams["figure.figsize"] = (10, 6)
+
+    plt.rc("xtick", labelsize=xticksize)
+    plt.rc("ytick", labelsize=yticksize)
+    plt.rc("legend", fontsize=legendsize)
