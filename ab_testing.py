@@ -522,3 +522,140 @@ def method_linearization(a: np.array, b: np.array) -> Tuple[float, float]:
     _, pvalue = stats.ttest_ind(a_lin, b_lin)
     delta = np.mean(b_lin) - np.mean(a_lin)
     return pvalue, delta
+
+
+def method_bonferroni(pvalues: np.array, alpha: float = 0.05) -> float:
+    """
+    Applies the Bonferroni correction to a given array of p-values.
+
+    Args:
+        pvalues (np.array): An array of p-values.
+        alpha (float, optional): The significance level. Defaults to 0.05.
+
+    Returns:
+        float: The corrected significance level after applying the Bonferroni correction.
+
+    Raises:
+        None
+
+    Example:
+        >>> pvalues = np.array([0.01, 0.02, 0.03])
+        >>> method_bonferroni(pvalues)
+        0.016666666666666666
+
+    The Bonferroni correction is a multiple testing correction method that adjusts the significance level
+    to control the family-wise error rate (FWER). It divides the desired significance level (alpha) by the
+    number of comparisons made (m) to ensure that the overall error rate remains at or below the specified
+    level.
+
+    The function calculates the corrected significance level (alpha_) by dividing the original alpha by the
+    number of p-values in the array (m). Then, it compares each p-value in the array with the corrected alpha
+    level and creates a binary array (res) where 1 represents a significant p-value and 0 represents a
+    non-significant p-value.
+
+    The function returns the corrected significance level (alpha_) as a float value.
+    """
+    m = len(pvalues)
+    alpha_ = alpha / m
+    res = (np.array(pvalues) <= alpha_).astype(int)
+    return res
+
+
+def method_holm(pvalues: np.array, alpha: float = 0.05) -> float:
+    """
+    Applies the Holm-Bonferroni correction to a given array of p-values.
+
+    Args:
+        pvalues (np.array): An array of p-values.
+        alpha (float, optional): The significance level. Defaults to 0.05.
+
+    Returns:
+        float: The corrected significance level after applying the Holm-Bonferroni correction.
+
+    Raises:
+        None
+
+    Example:
+        >>> pvalues = np.array([0.01, 0.02, 0.03])
+        >>> method_holm(pvalues)
+        array([1, 1, 0])
+
+    The Holm-Bonferroni correction is a step-down method that adjusts the significance level for multiple
+    comparisons while controlling the family-wise error rate (FWER). It ranks the p-values in ascending order
+    and compares each p-value with a sequentially adjusted alpha value.
+
+    The function first calculates the adjusted alpha values by dividing the original alpha by the rank of each
+    p-value. The p-values are then sorted in ascending order, and a result array (res) is initialized with zeros.
+
+    It iterates over the sorted p-values and their corresponding indexes. For each p-value, it compares it with
+    the adjusted alpha value at the current index. If the p-value is smaller, it sets the corresponding element
+    in the result array to 1, indicating significance. If the p-value is larger or equal, it breaks out of the
+    loop since subsequent p-values would also be non-significant.
+
+    Finally, the result array is converted to integers and returned as the corrected significance levels.
+    """
+    m = len(pvalues)
+    array_alpha = np.arange(m, 0, -1)
+    array_alpha = alpha / array_alpha
+    sorted_pvalue_indexes = np.argsort(pvalues)
+    res = np.zeros(m)
+    for idx, pvalue_index in enumerate(sorted_pvalue_indexes):
+        pvalue = pvalues[pvalue_index]
+        alpha_ = array_alpha[idx]
+        if pvalue < alpha_:
+            res[pvalue_index] = 1
+        else:
+            break
+    res = res.astype(int)
+    return res
+
+
+def method_benjamini_hochberg(pvalues: np.array, alpha: float = 0.05) -> float:
+    """
+    Applies the Benjamini-Hochberg procedure to a given array of p-values.
+
+    Args:
+        pvalues (np.array): An array of p-values.
+        alpha (float, optional): The significance level. Defaults to 0.05.
+
+    Returns:
+        float: The corrected significance level after applying the Benjamini-Hochberg procedure.
+
+    Raises:
+        None
+
+    Example:
+        >>> pvalues = np.array([0.01, 0.02, 0.03])
+        >>> method_benjamini_hochberg(pvalues)
+        array([1, 1, 0])
+
+    The Benjamini-Hochberg procedure is a step-up method that controls the false discovery rate (FDR) when
+    performing multiple hypothesis tests. It ranks the p-values in ascending order and compares each p-value
+    with an adjusted alpha value based on its rank.
+
+    The function first calculates the adjusted alpha values using the formula: alpha * rank / m, where alpha is
+    the significance level, rank is the position of the p-value in the sorted array, and m is the total number
+    of p-values. The p-values are then sorted in ascending order, and a result array (res) is initialized with
+    zeros.
+
+    It iterates over the sorted p-values and their corresponding indexes. For each p-value, it compares it with
+    the adjusted alpha value at the current index. If the p-value is smaller or equal, it sets the corresponding
+    element in the result array to 1, indicating significance. If the p-value is larger, it breaks out of the loop
+    since subsequent p-values would also be non-significant.
+
+    Finally, the result array is converted to integers and returned as the corrected significance levels.
+    """
+    m = len(pvalues)
+    array_alpha = np.arange(1, m + 1)
+    array_alpha = alpha * array_alpha / m
+    sorted_pvalue_indexes = np.argsort(pvalues)
+    res = np.zeros(m)
+    for idx, pvalue_index in enumerate(sorted_pvalue_indexes):
+        pvalue = pvalues[pvalue_index]
+        alpha_ = array_alpha[idx]
+        if pvalue <= alpha_:
+            res[pvalue_index] = 1
+        else:
+            break
+    res = res.astype(int)
+    return res
