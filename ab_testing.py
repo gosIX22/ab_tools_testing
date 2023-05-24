@@ -114,10 +114,6 @@ class ABTesting:
 
 
 def ab_group_split(salt: str = ""):
-    """
-    :param salt:
-    :return:
-    """
     pass
 
 
@@ -381,3 +377,148 @@ def set_plot_params():
     plt.rc("xtick", labelsize=xticksize)
     plt.rc("ytick", labelsize=yticksize)
     plt.rc("legend", fontsize=legendsize)
+
+
+def bootstrap_ratio(a: np.array, b: np.array, n: int = 1000) -> Tuple[float, float]:
+    """
+    Perform a bootstrap test to compare the ratio of two groups.
+
+    This function compares the ratio between two groups (a and b) using a bootstrap test.
+    It calculates the p-value and the difference in ratios between the groups.
+
+    Parameters:
+        a (array-like): Data of group A.
+        b (array-like): Data of group B.
+        n (int): Number of bootstrap iterations (default: 1000).
+
+    Returns:
+        Tuple[float, float]: A tuple containing the p-value and the difference in ratios.
+
+    Example:
+        a = [1, 2, 3, 4, 5]
+        b = [6, 7, 8, 9, 10]
+        p_value, delta = bootstrap_ratio(a, b)
+        print("p-value:", p_value)
+        print("difference in ratios:", delta)
+
+    Note:
+        The function performs a bootstrap test by resampling with replacement from the original groups.
+        It calculates the difference in ratios between the resampled groups and compares it to the original difference.
+        The p-value is calculated using a two-tailed test based on the normal distribution.
+    """
+    len_a = len(a)
+    len_b = len(b)
+    a_sum_count = np.zeros((len_a, 2))
+    a_sum_count[:, 0] = np.array([np.sum(row) for row in a])
+    a_sum_count[:, 1] = np.array([len(row) for row in a])
+    b_sum_count = np.zeros((len_b, 2))
+    b_sum_count[:, 0] = np.array([np.sum(row) for row in b])
+    b_sum_count[:, 1] = np.array([len(row) for row in b])
+
+    list_diff = []
+    for _ in range(n):
+        a_bootstrap_index = np.random.choice(np.arange(len_a), len_a)
+        b_bootstrap_index = np.random.choice(np.arange(len_b), len_b)
+        a_bootstrap = a_sum_count[a_bootstrap_index]
+        b_bootstrap = b_sum_count[b_bootstrap_index]
+        a_metric = a_bootstrap[:, 0].sum() / a_bootstrap[:, 1].sum()
+        b_metric = b_bootstrap[:, 0].sum() / b_bootstrap[:, 1].sum()
+        list_diff.append(b_metric - a_metric)
+    delta = (
+            b_sum_count[:, 0].sum() / b_sum_count[:, 1].sum()
+            - a_sum_count[:, 0].sum() / a_sum_count[:, 1].sum()
+    )
+    std = np.std(list_diff)
+    pvalue = 2 * (1 - stats.norm.cdf(np.abs(delta / std)))
+    return pvalue, delta
+
+
+def delta_method(a: np.array, b: np.array) -> Tuple[float, float]:
+    """
+    Perform a statistical test using the Delta method to compare two groups.
+
+    This function compares the means between two groups (a and b) using the Delta method.
+    It calculates the p-value and the difference in means between the groups.
+
+    Parameters:
+        a (array-like): Data of group A.
+        b (array-like): Data of group B.
+
+    Returns:
+        Tuple[float, float]: A tuple containing the p-value and the difference in means.
+
+    Example:
+        a = [[1, 2, 3], [4, 5, 6]]
+        b = [[7, 8, 9], [10, 11, 12]]
+        p_value, delta = delta_method(a, b)
+        print("p-value:", p_value)
+        print("difference in means:", delta)
+
+    Note:
+        The function calculates the mean and standard deviation for each group.
+        It uses the Delta method to estimate the variance of the difference in means.
+        The test statistic is computed as the difference in means divided by the standard error.
+        The p-value is calculated using a two-tailed test based on the normal distribution.
+    """
+    dict_stats = {'a': {'data': a}, 'b': {'data': b}}
+    for key, dict_ in dict_stats.items():
+        data = dict_['data']
+        dict_['x'] = np.array([np.sum(row) for row in data])
+        dict_['y'] = np.array([len(row) for row in data])
+        dict_['metric'] = np.sum(dict_['x']) / np.sum(dict_['y'])
+        dict_['len'] = len(data)
+        dict_['mean_x'] = np.mean(dict_['x'])
+        dict_['mean_y'] = np.mean(dict_['y'])
+        dict_['std_x'] = np.std(dict_['x'])
+        dict_['std_y'] = np.std(dict_['y'])
+        dict_['cov_xy'] = np.cov(dict_['x'], dict_['y'])[0, 1]
+        dict_['var_metric'] = (
+                                      (dict_['std_x'] ** 2) / (dict_['mean_y'] ** 2)
+                                      + (dict_['mean_x'] ** 2) / (dict_['mean_y'] ** 4) * (dict_['std_y'] ** 2)
+                                      - 2 * dict_['mean_x'] / (dict_['mean_y'] ** 3) * dict_['cov_xy']
+                              ) / dict_['len']
+    var = dict_stats['b']['var_metric'] + dict_stats['a']['var_metric']
+    delta = dict_stats['b']['metric'] - dict_stats['a']['metric']
+    statistic = delta / np.sqrt(var)
+    pvalue = (1 - stats.norm.cdf(np.abs(statistic))) * 2
+    return pvalue, delta
+
+
+def method_linearization(a: np.array, b: np.array) -> Tuple[float, float]:
+    """
+    Perform a statistical test using the method of linearization to compare two groups.
+
+    This function compares the means between two groups (a and b) using the method of linearization.
+    It calculates the p-value and the difference in means between the groups.
+
+    Parameters:
+        a (np.array): Data of group A.
+        b (np.array): Data of group B.
+
+    Returns:
+        Tuple[float, float]: A tuple containing the p-value and the difference in means.
+
+    Example:
+        a = np.array([[1, 2, 3], [4, 5, 6]])
+        b = np.array([[7, 8, 9], [10, 11, 12]])
+        p_value, delta = method_linearization(a, b)
+        print("p-value:", p_value)
+        print("difference in means:", delta)
+
+    Note:
+        The function calculates the sum and count for each group.
+        It estimates the coefficient using the ratio of the sum of x values to the sum of y values in group A.
+        The linearized values are obtained by subtracting the estimated linear component from the original values.
+        The p-value is calculated using a two-sample independent t-test on the linearized values.
+        The difference in means is computed as the mean of the linearized values in group B minus the mean in group A.
+    """
+    a_x = np.array([np.sum(row) for row in a])
+    a_y = np.array([len(row) for row in a])
+    b_x = np.array([np.sum(row) for row in b])
+    b_y = np.array([len(row) for row in b])
+    coef = np.sum(a_x) / np.sum(a_y)
+    a_lin = a_x - coef * a_y
+    b_lin = b_x - coef * b_y
+    _, pvalue = stats.ttest_ind(a_lin, b_lin)
+    delta = np.mean(b_lin) - np.mean(a_lin)
+    return pvalue, delta
